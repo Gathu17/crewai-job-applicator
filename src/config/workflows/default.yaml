@@ -1,0 +1,89 @@
+# Default workflow configuration for job application automation
+
+name: "Default Job Application Workflow"
+version: "1.0"
+description: "Standard workflow for automated job applications"
+
+# Workflow stages
+stages:
+  - name: "job_discovery"
+    agent: "job_scout"
+    enabled: true
+    config:
+      sources:
+        - jooble
+        - linkedin
+      max_jobs_per_run: 50
+      filters:
+        min_match_score: 70
+  
+  - name: "job_matching"
+    agent: "matcher"
+    enabled: true
+    config:
+      use_rag: true
+      min_compatibility_score: 75
+      generate_detailed_analysis: true
+  
+  - name: "document_tailoring"
+    agent: "tailor"
+    enabled: true
+    config:
+      generate_resume: true
+      generate_cover_letter: true
+      optimize_for_ats: true
+      formats:
+        - markdown
+        - pdf
+  
+  - name: "application_submission"
+    agent: "applicator"
+    enabled: false  # Manual approval required by default
+    config:
+      auto_submit: false
+      require_review: true
+      log_applications: true
+      notify_on_submit: true
+
+# Scheduling
+schedule:
+  frequency: "daily"  # Options: hourly, daily, weekly
+  time: "09:00"  # Time in HH:MM format (24-hour)
+  timezone: "UTC"
+
+# Notifications
+notifications:
+  channels:
+    - telegram
+    - email
+  events:
+    - job_found
+    - high_match
+    - application_submitted
+    - application_error
+
+# Filters
+filters:
+  keywords:
+    include:
+      - python
+      - fastapi
+      - machine learning
+    exclude:
+      - unpaid
+      - volunteer
+  
+  locations:
+    - remote
+    - "United States"
+  
+  experience_levels:
+    - mid
+    - senior
+  
+  salary:
+    min: 80000
+    currency: "USD"
+
+
+

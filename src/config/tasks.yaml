@@ -1,0 +1,244 @@
+# Task configurations for job application automation workflow
+# These tasks define the specific work each agent performs
+
+analyze_job:
+  description: >
+    You are analyzing a job posting. The full job description is provided below.
+
+    {job_input}
+
+    Extract and analyze the following information from the job posting:
+    - Job title (required)
+    - Brief summary (2-3 sentences describing the role)
+    - List of requirements (education, experience, certifications)
+    - List of key skills (technical and soft skills mentioned)
+    - Seniority level (entry, mid, senior, lead, or principal)
+    - Application URL (if mentioned in the posting)
+
+    Your FINAL ANSWER must be ONLY a valid JSON object with this exact structure:
+    {{
+      "title": "job title here",
+      "summary": "2-3 sentence summary of the role",
+      "requirements": ["requirement 1", "requirement 2", "requirement 3"],
+      "key_skills": ["skill 1", "skill 2", "skill 3"],
+      "seniority": "entry|mid|senior|lead|principal",
+      "apply_url": "application url or null"
+    }}
+
+    IMPORTANT:
+    - DO NOT include any text before or after the JSON
+    - DO NOT add explanations or commentary
+    - Ensure all required fields are present (especially "title")
+    - Return ONLY valid JSON
+  expected_output: >
+    A valid JSON object with fields: title, summary, requirements, key_skills, seniority, apply_url.
+    The title field is required. Return only the JSON object, nothing else.
+
+research_company:
+  description: >
+    Research the company and gather comprehensive information to help with application preparation.
+
+    Company Name: {company_name}
+
+    Your research should cover:
+    1. Company overview (industry, size, founding year, headquarters)
+    2. Products and services offered
+    3. Company mission, vision, and values
+    4. Recent news and developments (last 6 months)
+    5. Company culture and work environment
+    6. Employee reviews and ratings (if available)
+    7. Interview process insights
+    8. Key executives and leadership
+    9. Competitors and market position
+    10. Growth trajectory and funding (if applicable)
+
+    Return your research as a valid JSON object with the following structure:
+    {{
+      "company": "company name",
+      "industry": "primary industry",
+      "size": "employee count range",
+      "founded": "year",
+      "headquarters": "location",
+      "overview": "2-3 paragraph company description",
+      "products_services": ["list of main products/services"],
+      "mission": "company mission statement",
+      "values": ["core company values"],
+      "recent_news": ["list of recent news items with dates"],
+      "culture": "description of company culture",
+      "interview_tips": ["specific tips for interviewing at this company"],
+      "glassdoor_rating": "rating if available",
+      "competitors": ["main competitors"],
+      "funding_stage": "if applicable"
+    }}
+  expected_output: >
+    A valid JSON object containing comprehensive company research. The information should be
+    current, accurate, and actionable for interview preparation and application tailoring.
+
+tailor_resume:
+  description: >
+    Analyze the base resume against the job requirements and provide specific optimization recommendations.
+
+    Base Resume: {base_resume}
+
+    Job Analysis: {job_analysis}
+
+    Your task is to:
+    1. Identify gaps between the resume and job requirements
+    2. Suggest specific keywords to add for ATS optimization
+    3. Recommend which experiences to highlight or expand
+    4. Suggest achievement quantification opportunities
+    5. Identify skills to emphasize or add
+    6. Recommend sections to reorder or restructure
+    7. Provide specific bullet point rewrites
+    8. Calculate compatibility score before and after changes
+
+    Return your recommendations as a valid JSON object:
+    {{
+      "score_before": 0-100,
+      "score_after": 0-100,
+      "highlights": ["specific experiences or skills to emphasize"],
+      "keywords_to_add": ["ATS keywords missing from resume"],
+      "changes": [
+        {{
+          "section": "section name",
+          "type": "add|modify|remove|reorder",
+          "current": "current text if modifying",
+          "suggested": "suggested new text",
+          "reason": "why this change improves fit"
+        }}
+      ],
+      "bullet_point_rewrites": [
+        {{
+          "original": "original bullet point",
+          "improved": "improved version with quantification",
+          "impact": "why this is better"
+        }}
+      ],
+      "missing_skills": ["skills in job description not in resume"],
+      "transferable_skills": ["skills candidate has that apply to this role"]
+    }}
+  expected_output: >
+    A valid JSON object with specific, actionable resume optimization recommendations.
+    Each suggestion should be concrete and directly tied to improving job fit.
+
+generate_resume:
+  description: >
+    Generate a professionally formatted resume from the optimized content and recommendations.
+
+    Optimized Content: {optimized_content}
+
+    Output Format: {output_format}
+
+    Your task is to:
+    1. Create a clean, professional resume layout
+    2. Incorporate all optimization recommendations
+    3. Ensure ATS compatibility (proper formatting, no tables/graphics for ATS version)
+    4. Use strong action verbs and quantified achievements
+    5. Maintain consistent formatting and style
+    6. Optimize for readability and visual hierarchy
+    7. Include all relevant sections (Summary, Experience, Skills, Education, etc.)
+    8. Tailor the professional summary to the target role
+
+    Return the generated resume as a valid JSON object:
+    {{
+      "resume_id": "unique identifier",
+      "format": "markdown|pdf|docx",
+      "content": "full formatted resume content",
+      "sections": {{
+        "summary": "professional summary text",
+        "experience": "experience section content",
+        "skills": "skills section content",
+        "education": "education section content",
+        "additional": "any additional sections"
+      }},
+      "word_count": number,
+      "ats_score": 0-100
+    }}
+  expected_output: >
+    A valid JSON object containing a professionally formatted, ATS-optimized resume
+    ready for submission. The resume should be polished, error-free, and tailored
+    to the target position.
+
+generate_report:
+  description: >
+    Compile a comprehensive application report synthesizing all workflow outputs.
+
+    Job Analysis: {job_analysis}
+    Company Research: {company_research}
+    Tailoring Recommendations: {tailor_recommendations}
+    Generated Resume: {generated_resume}
+
+    Your task is to:
+    1. Summarize the job opportunity and key requirements
+    2. Highlight important company insights
+    3. Summarize resume changes and improvements
+    4. Provide application strategy recommendations
+    5. List next steps and action items
+    6. Include interview preparation tips
+    7. Suggest follow-up timeline
+    8. Identify potential red flags or concerns
+
+    Return the report as a valid JSON object:
+    {{
+      "report_id": "unique identifier",
+      "summary": "executive summary of the opportunity",
+      "job_fit_score": 0-100,
+      "key_insights": [
+        "important insights about the role and company"
+      ],
+      "resume_improvements": "summary of resume changes made",
+      "application_strategy": "recommended approach for this application",
+      "next_steps": [
+        {{
+          "action": "specific action to take",
+          "timeline": "when to do it",
+          "priority": "high|medium|low"
+        }}
+      ],
+      "interview_prep": [
+        "specific interview preparation recommendations"
+      ],
+      "questions_to_ask": [
+        "thoughtful questions to ask the interviewer"
+      ],
+      "red_flags": ["any concerns or red flags identified"],
+      "recommendations": "overall recommendation and strategy"
+    }}
+  expected_output: >
+    A valid JSON object containing a comprehensive, actionable application report.
+    The report should provide clear guidance on how to approach this opportunity
+    and maximize chances of success.
+
+scout_jobs:
+  description: >
+    Search for and discover job opportunities matching the specified criteria.
+
+    Search Criteria: {search_criteria}
+
+    Your task is to:
+    1. Search ONLY linkedin
+    2. Filter results based on criteria (role, location, experience, skills)
+    3. Remove duplicates and irrelevant postings
+    4. Extract key information from each posting
+    5. Rank results by relevance
+    6. Include application URLs and posting dates
+
+    Return discovered jobs as a valid JSON array:
+    [
+      {{
+        "title": "job title",
+        "company": "company name",
+        "location": "job location",
+        "remote_policy": "remote|hybrid|onsite",
+        "description": "job description text",
+        "url": "application URL",
+        "source": "job board name",
+        "posted_date": "when posted",
+        "salary_range": "if available",
+        "relevance_score": 0-100
+      }}
+    ]
+  expected_output: >
+    A valid JSON array of job postings matching the search criteria, ranked by
+    relevance. Each job should include complete information needed for evaluation
+    and application.

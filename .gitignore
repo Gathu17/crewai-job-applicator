@@ -117,5 +117,5 @@ applications_log.json
 job_postings/
 candidate_data/
 
-
+frontend/node_modules
 
