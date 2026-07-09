@@ -1,8 +1,14 @@
-import { Search, MapPin, Briefcase, DollarSign } from 'lucide-react';
+import { Search, MapPin, Briefcase, DollarSign, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import api from '../../services/api';
+import type { JobSearchCriteria, JobPosting } from '../../services/api';
+import { Job } from './JobCard';
 
 interface JobSearchProps {
   onSearch: (filters: SearchFilters) => void;
+  onResults: (jobs: Job[]) => void;
+  onLoading: (loading: boolean) => void;
+  onError: (error: string | null) => void;
 }
 
 export interface SearchFilters {
@@ -12,16 +18,59 @@ export interface SearchFilters {
   salaryMin: string;
 }
 
-export function JobSearch({ onSearch }: JobSearchProps) {
+function postingToJob(p: JobPosting): Job {
+  return {
+    id: p.id,
+    title: p.title,
+    company: p.company,
+    location: p.location,
+    description: p.description,
+    requirements: p.requirements || [],
+    salary_range: p.salary_range,
+    salary: p.salary_range,
+    posted_date: p.posted_date,
+    postedDate: p.posted_date,
+    url: p.url,
+    source: p.source,
+  };
+}
+
+export function JobSearch({ onSearch, onResults, onLoading, onError }: JobSearchProps) {
   const [filters, setFilters] = useState<SearchFilters>({
     keyword: '',
     location: '',
     jobType: '',
     salaryMin: ''
   });
+  const [searching, setSearching] = useState(false);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     onSearch(filters);
+
+    const criteria: JobSearchCriteria = {
+      role: filters.keyword,
+      location: filters.location || undefined,
+      skills: filters.keyword ? filters.keyword.split(' ').filter(Boolean) : undefined,
+    };
+
+    if (filters.salaryMin) {
+      criteria.salary_min = parseInt(filters.salaryMin);
+    }
+
+    setSearching(true);
+    onLoading(true);
+    onError(null);
+
+    try {
+      const response = await api.searchJobs(criteria);
+      onResults(response.jobs.map(postingToJob));
+    } catch (err: any) {
+      onError(err.message || 'Failed to search jobs');
+      onResults([]);
+    } finally {
+      setSearching(false);
+      onLoading(false);
+    }
   };
 
   return (
@@ -36,7 +85,7 @@ export function JobSearch({ onSearch }: JobSearchProps) {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={filters.keyword}
             onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
         </div>
         <div className="relative">
@@ -47,7 +96,7 @@ export function JobSearch({ onSearch }: JobSearchProps) {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={filters.location}
             onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
         </div>
         <div className="relative">
@@ -81,9 +130,17 @@ export function JobSearch({ onSearch }: JobSearchProps) {
       </div>
       <button
         onClick={handleSearch}
-        className="mt-4 w-full md:w-auto px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        disabled={searching}
+        className="mt-4 w-full md:w-auto px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Search Jobs
+        {searching ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Searching...
+          </span>
+        ) : (
+          'Search Jobs'
+        )}
       </button>
     </div>
   );

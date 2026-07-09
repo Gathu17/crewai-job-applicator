@@ -1,15 +1,19 @@
-import { MapPin, Briefcase, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import { MapPin, Briefcase, DollarSign, Clock, TrendingUp, ExternalLink } from 'lucide-react';
 
 export interface Job {
-  id: string;
+  id?: string;
   title: string;
   company: string;
-  location: string;
-  type: string;
-  salary: string;
-  postedDate: string;
+  location?: string;
+  type?: string;
+  salary_range?: string;
+  salary?: string;
+  posted_date?: string;
+  postedDate?: string;
   description: string;
-  requirements: string[];
+  requirements?: string[];
+  url?: string;
+  source?: string;
   matchScore?: number;
 }
 
@@ -35,22 +39,30 @@ export function JobCard({ job, onViewDetails }: JobCardProps) {
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-        <div className="flex items-center gap-1">
-          <MapPin size={16} />
-          <span>{job.location}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Briefcase size={16} />
-          <span className="capitalize">{job.type}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <DollarSign size={16} />
-          <span>{job.salary}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Clock size={16} />
-          <span>{job.postedDate}</span>
-        </div>
+        {job.location && (
+          <div className="flex items-center gap-1">
+            <MapPin size={16} />
+            <span>{job.location}</span>
+          </div>
+        )}
+        {job.type && (
+          <div className="flex items-center gap-1">
+            <Briefcase size={16} />
+            <span className="capitalize">{job.type}</span>
+          </div>
+        )}
+        {(job.salary || job.salary_range) && (
+          <div className="flex items-center gap-1">
+            <DollarSign size={16} />
+            <span>{job.salary || job.salary_range}</span>
+          </div>
+        )}
+        {(job.postedDate || job.posted_date) && (
+          <div className="flex items-center gap-1">
+            <Clock size={16} />
+            <span>{job.postedDate || job.posted_date}</span>
+          </div>
+        )}
       </div>
 
       <p className="text-gray-700 mb-4 line-clamp-2">{job.description}</p>

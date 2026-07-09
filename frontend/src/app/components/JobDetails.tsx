@@ -1,6 +1,8 @@
-import { X, MapPin, Briefcase, DollarSign, Clock, CheckCircle2, AlertCircle, TrendingUp, FileText } from 'lucide-react';
+import { X, MapPin, Briefcase, DollarSign, Clock, CheckCircle2, AlertCircle, TrendingUp, FileText, Loader2 } from 'lucide-react';
 import { Job } from './JobCard';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../../services/api';
+import type { JobAnalysis as JobAnalysisData } from '../../services/api';
 
 interface JobDetailsProps {
   job: Job;
@@ -20,12 +22,33 @@ export interface Resume {
 
 export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
   const [showAnalysis, setShowAnalysis] = useState(true);
+  const [analysis, setAnalysis] = useState<JobAnalysisData | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const analysis = analyzeJobDescription(job, resume);
-  const matchScore = calculateMatchScore(job, resume);
+  useEffect(() => {
+    let cancelled = false;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+
+    api.analyzeJob(job.description, job.url)
+      .then(data => {
+        if (!cancelled) setAnalysis(data);
+      })
+      .catch(err => {
+        if (!cancelled) setAnalysisError(err.message || 'Analysis failed');
+      })
+      .finally(() => {
+        if (!cancelled) setAnalysisLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [job.id, job.description, job.url]);
+
+  const matchScore = resume ? calculateMatchScore(job, resume) : 0;
 
   const handleApply = () => {
-    onApply(job.id);
+    onApply(job.id || '');
   };
 
   return (
@@ -46,22 +69,30 @@ export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
 
         <div className="p-6">
           <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
-            <div className="flex items-center gap-1">
-              <MapPin size={16} />
-              <span>{job.location}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Briefcase size={16} />
-              <span className="capitalize">{job.type}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <DollarSign size={16} />
-              <span>{job.salary}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock size={16} />
-              <span>{job.postedDate}</span>
-            </div>
+            {job.location && (
+              <div className="flex items-center gap-1">
+                <MapPin size={16} />
+                <span>{job.location}</span>
+              </div>
+            )}
+            {job.type && (
+              <div className="flex items-center gap-1">
+                <Briefcase size={16} />
+                <span className="capitalize">{job.type}</span>
+              </div>
+            )}
+            {(job.salary || job.salary_range) && (
+              <div className="flex items-center gap-1">
+                <DollarSign size={16} />
+                <span>{job.salary || job.salary_range}</span>
+              </div>
+            )}
+            {(job.postedDate || job.posted_date) && (
+              <div className="flex items-center gap-1">
+                <Clock size={16} />
+                <span>{job.postedDate || job.posted_date}</span>
+              </div>
+            )}
           </div>
 
           {resume && (
@@ -78,10 +109,10 @@ export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
                 <div>
                   <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <CheckCircle2 size={18} className="text-green-600" />
-                    Matching Skills ({analysis.matchingSkills.length})
+                    Matching Skills ({analysisMatchingSkills(job, resume).length})
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {analysis.matchingSkills.map((skill, idx) => (
+                    {analysisMatchingSkills(job, resume).map((skill, idx) => (
                       <span key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
                         {skill}
                       </span>
@@ -91,10 +122,10 @@ export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
                 <div>
                   <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <AlertCircle size={18} className="text-orange-600" />
-                    Missing Skills ({analysis.missingSkills.length})
+                    Missing Skills ({analysisMissingSkills(job, resume).length})
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {analysis.missingSkills.map((skill, idx) => (
+                    {analysisMissingSkills(job, resume).map((skill, idx) => (
                       <span key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm">
                         {skill}
                       </span>
@@ -110,17 +141,19 @@ export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
             <p className="text-gray-700 whitespace-pre-line">{job.description}</p>
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Requirements</h3>
-            <ul className="space-y-2">
-              {job.requirements.map((req, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-gray-700">
-                  <CheckCircle2 size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                  <span>{req}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {job.requirements && job.requirements.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3">Requirements</h3>
+              <ul className="space-y-2">
+                {job.requirements.map((req, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-gray-700">
+                    <CheckCircle2 size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                    <span>{req}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {showAnalysis && (
             <div className="mb-6 bg-blue-50 rounded-lg p-6 border border-blue-100">
@@ -128,20 +161,51 @@ export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
                 <FileText size={20} className="text-blue-600" />
                 AI-Powered Job Analysis
               </h3>
-              <div className="space-y-3 text-gray-700">
-                <div>
-                  <h4 className="font-medium mb-1">Key Responsibilities:</h4>
-                  <p>{analysis.keyResponsibilities}</p>
+
+              {analysisLoading && (
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyzing job description...</span>
                 </div>
-                <div>
-                  <h4 className="font-medium mb-1">Growth Opportunities:</h4>
-                  <p>{analysis.growthOpportunities}</p>
+              )}
+
+              {analysisError && (
+                <p className="text-orange-700 text-sm">{analysisError}</p>
+              )}
+
+              {analysis && !analysisLoading && (
+                <div className="space-y-3 text-gray-700">
+                  {analysis.summary && (
+                    <div>
+                      <h4 className="font-medium mb-1">Summary:</h4>
+                      <p>{analysis.summary}</p>
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-medium mb-1">Seniority:</h4>
+                    <p className="capitalize">{analysis.seniority || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Key Skills:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.key_skills.map((skill, idx) => (
+                        <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {analysis.apply_url && (
+                    <div>
+                      <h4 className="font-medium mb-1">Application URL:</h4>
+                      <a href={analysis.apply_url} target="_blank" rel="noopener noreferrer"
+                         className="text-blue-600 hover:underline text-sm break-all">
+                        {analysis.apply_url}
+                      </a>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h4 className="font-medium mb-1">Application Tips:</h4>
-                  <p>{analysis.applicationTips}</p>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -165,24 +229,18 @@ export function JobDetails({ job, onClose, onApply, resume }: JobDetailsProps) {
   );
 }
 
-function analyzeJobDescription(job: Job, resume: Resume | null) {
-  const jobSkills = extractSkills(job.description + ' ' + job.requirements.join(' '));
-  const resumeSkills = resume?.skills || [];
-
-  const matchingSkills = jobSkills.filter(skill =>
-    resumeSkills.some(rSkill => rSkill.toLowerCase().includes(skill.toLowerCase()) ||
+function analysisMatchingSkills(job: Job, resume: Resume): string[] {
+  const jobSkills = extractSkills(job.description + ' ' + (job.requirements || []).join(' '));
+  return jobSkills.filter(skill =>
+    resume.skills.some(rSkill => rSkill.toLowerCase().includes(skill.toLowerCase()) ||
                                  skill.toLowerCase().includes(rSkill.toLowerCase()))
   );
+}
 
-  const missingSkills = jobSkills.filter(skill => !matchingSkills.includes(skill)).slice(0, 5);
-
-  return {
-    matchingSkills,
-    missingSkills,
-    keyResponsibilities: 'This role focuses on developing and maintaining software applications, collaborating with cross-functional teams, and contributing to technical architecture decisions.',
-    growthOpportunities: 'Excellent opportunity to work with modern technologies, mentor junior developers, and potentially move into technical leadership roles.',
-    applicationTips: 'Highlight your experience with the matching skills in your cover letter. Consider taking online courses for the missing skills to strengthen your application.'
-  };
+function analysisMissingSkills(job: Job, resume: Resume): string[] {
+  const jobSkills = extractSkills(job.description + ' ' + (job.requirements || []).join(' '));
+  const matching = analysisMatchingSkills(job, resume);
+  return jobSkills.filter(skill => !matching.includes(skill)).slice(0, 5);
 }
 
 function extractSkills(text: string): string[] {
@@ -198,10 +256,10 @@ function extractSkills(text: string): string[] {
   );
 }
 
-function calculateMatchScore(job: Job, resume: Resume | null): number {
+function calculateMatchScore(job: Job, resume: Resume): number {
   if (!resume) return 0;
 
-  const jobSkills = extractSkills(job.description + ' ' + job.requirements.join(' '));
+  const jobSkills = extractSkills(job.description + ' ' + (job.requirements || []).join(' '));
   const resumeSkills = resume.skills;
 
   if (jobSkills.length === 0) return 75;

@@ -18,70 +18,32 @@ import {
 } from "./components/ApplicationTracker";
 import { AIWorkflow } from "./components/AIWorkflow";
 import { MonitoringDashboard } from "./components/MonitoringDashboard";
-import { mockJobs } from "./components/mockData";
 
 type Tab = "search" | "resume" | "applications" | "ai-tailor" | "monitoring";
 
 export default function App() {
     const [activeTab, setActiveTab] = useState<Tab>("search");
-    const [jobs, setJobs] = useState<Job[]>(mockJobs);
+    const [jobs, setJobs] = useState<Job[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [resume, setResume] = useState<Resume | null>(null);
     const [applications, setApplications] = useState<Application[]>([]);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const handleSearch = (filters: SearchFilters) => {
-        let filteredJobs = [...mockJobs];
+    const handleSearch = (_filters: SearchFilters) => {
+    };
 
-        if (filters.keyword) {
-            filteredJobs = filteredJobs.filter(
-                (job) =>
-                    job.title
-                        .toLowerCase()
-                        .includes(filters.keyword.toLowerCase()) ||
-                    job.description
-                        .toLowerCase()
-                        .includes(filters.keyword.toLowerCase()),
-            );
-        }
+    const handleSearchResults = (results: Job[]) => {
+        setJobs(results);
+    };
 
-        if (filters.location) {
-            filteredJobs = filteredJobs.filter((job) =>
-                job.location
-                    .toLowerCase()
-                    .includes(filters.location.toLowerCase()),
-            );
-        }
+    const handleSearchLoading = (loading: boolean) => {
+        setSearching(loading);
+    };
 
-        if (filters.jobType) {
-            filteredJobs = filteredJobs.filter(
-                (job) => job.type === filters.jobType,
-            );
-        }
-
-        if (filters.salaryMin) {
-            const minSalary = parseInt(filters.salaryMin);
-            filteredJobs = filteredJobs.filter((job) => {
-                const salaryMatch = job.salary.match(/\$(\d+)k/);
-                if (salaryMatch) {
-                    const jobSalary = parseInt(salaryMatch[1]) * 1000;
-                    return jobSalary >= minSalary;
-                }
-                return true;
-            });
-        }
-
-        if (resume) {
-            filteredJobs = filteredJobs.map((job) => ({
-                ...job,
-                matchScore: calculateMatchScore(job, resume),
-            }));
-            filteredJobs.sort(
-                (a, b) => (b.matchScore || 0) - (a.matchScore || 0),
-            );
-        }
-
-        setJobs(filteredJobs);
+    const handleSearchError = (error: string | null) => {
+        setSearchError(error);
     };
 
     const handleApply = (jobId: string) => {
@@ -99,20 +61,6 @@ export default function App() {
         setApplications([newApplication, ...applications]);
         setSelectedJob(null);
         setActiveTab("applications");
-    };
-
-    const calculateMatchScore = (job: Job, resume: Resume): number => {
-        const jobText = (
-            job.description +
-            " " +
-            job.requirements.join(" ")
-        ).toLowerCase();
-        const matchingSkills = resume.skills.filter((skill) =>
-            jobText.includes(skill.toLowerCase()),
-        );
-
-        if (resume.skills.length === 0) return 75;
-        return Math.round((matchingSkills.length / resume.skills.length) * 100);
     };
 
     const tabs = [
@@ -211,9 +159,28 @@ export default function App() {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {activeTab === "search" && (
                     <>
-                        <JobSearch onSearch={handleSearch} />
+                        <JobSearch
+                            onSearch={handleSearch}
+                            onResults={handleSearchResults}
+                            onLoading={handleSearchLoading}
+                            onError={handleSearchError}
+                        />
 
-                        {jobs.length === 0 ? (
+                        {searchError && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                                <p className="text-red-700 text-sm">{searchError}</p>
+                            </div>
+                        )}
+
+                        {searching ? (
+                            <div className="text-center py-12 text-gray-500">
+                                <Briefcase
+                                    size={48}
+                                    className="mx-auto mb-3 opacity-50 animate-pulse"
+                                />
+                                <p>Searching for jobs...</p>
+                            </div>
+                        ) : jobs.length === 0 ? (
                             <div className="text-center py-12 text-gray-500">
                                 <Briefcase
                                     size={48}
